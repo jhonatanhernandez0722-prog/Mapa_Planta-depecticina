@@ -342,8 +342,11 @@ export const Furniture = memo(function Furniture({ lod }: { lod: Lod }) {
       {lod >= 3 && [0, 1, 2, 3, 4].map((i) => <line key={i} x1={332} y1={599 + i * 2.6} x2={349} y2={599 + i * 2.6} className="k-x" stroke="#4b5563" />)}
 
       {/* ---------- Vestidores ---------- */}
-      {Array.from({ length: 8 }, (_, i) => (
-        <Locker key={i} x={284 + i * 16.6} y={366} w={16.6} h={11.5} lod={lod} />
+      {Array.from({ length: 4 }, (_, i) => (
+        <Locker key={`d${i}`} x={284 + i * 16.2} y={366} w={16.2} h={11.5} lod={lod} />
+      ))}
+      {Array.from({ length: 4 }, (_, i) => (
+        <Locker key={`v${i}`} x={353 + i * 16} y={366} w={16} h={11.5} lod={lod} />
       ))}
       <Sink x={283.5} y={391} w={11} h={11} lod={lod} />
       <Sink x={283.5} y={403} w={11} h={11} lod={lod} />

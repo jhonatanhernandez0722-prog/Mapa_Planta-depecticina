@@ -25,18 +25,22 @@ export interface PlanController {
   focusEquip: (id: string) => void;
   focusRoom: (id: string) => void;
   panTo: (x: number, y: number) => void;
+  /** Fija de inmediato el margen inferior oculto (antes de un enfoque). */
+  setBottomInset: (px: number) => void;
 }
 
 const LW: Record<Lod, number> = { 1: 0.85, 2: 1, 3: 1.2, 4: 1.45 };
 
 export function Plan({
-  hidden, selection, onSelect, controller, grid,
+  hidden, selection, onSelect, controller, grid, bottomInset = 0,
 }: {
   hidden: Set<LayerId>;
   selection: Selection;
   onSelect: (s: Selection) => void;
   controller: React.MutableRefObject<PlanController | null>;
   grid: boolean;
+  /** Píxeles ocultos en la parte inferior por un panel superpuesto (móvil). */
+  bottomInset?: number;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
   const worldRef = useRef<SVGGElement>(null);
@@ -46,6 +50,9 @@ export function Plan({
   const sizeRef = useRef({ w: 1, h: 1 });
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const insetRef = useRef(bottomInset);
+  insetRef.current = bottomInset;
+  const dblRef = useRef<(ev: MouseEvent | TouchEvent) => void>(() => {});
 
   /* ---------------- Cámara ---------------- */
   useLayoutEffect(() => {
@@ -78,7 +85,7 @@ export function Plan({
       .wheelDelta((ev: WheelEvent) => -ev.deltaY * (ev.deltaMode === 1 ? 0.05 : ev.deltaMode ? 1 : 0.0022) * (ev.ctrlKey ? 8 : 1))
       .clickDistance(4)
       .on('zoom', (ev) => apply(ev.transform));
-    sel.call(z).on('dblclick.zoom', null);
+    sel.call(z).on('dblclick.zoom', (ev: MouseEvent | TouchEvent) => dblRef.current(ev));
     zoomRef.current = z;
 
     const fitTransform = () => {
@@ -134,8 +141,14 @@ export function Plan({
         });
     };
 
-    const toBox = (b: Box, opts: { pad?: number; maxK?: number; duration?: number } = {}) => {
+    /** Tamaño útil de la vista: descuenta el panel inferior superpuesto. */
+    const visible = () => {
       const { w, h } = sizeRef.current;
+      return { w, h: Math.max(120, h - insetRef.current) };
+    };
+
+    const toBox = (b: Box, opts: { pad?: number; maxK?: number; duration?: number } = {}) => {
+      const { w, h } = visible();
       const pad = opts.pad ?? 0.12;
       const k = Math.min(opts.maxK ?? K_MAX, (w * (1 - pad * 2)) / b.w, (h * (1 - pad * 2)) / b.h);
       const t = zoomIdentity.translate(w / 2 - (b.x + b.w / 2) * k, h / 2 - (b.y + b.h / 2) * k).scale(k);
@@ -143,10 +156,13 @@ export function Plan({
     };
 
     controller.current = {
+      setBottomInset: (v) => {
+        insetRef.current = v;
+      },
       fit: (a = true) => animate(fitTransform(), a ? 650 : 0),
       zoomBy: (f) => {
         const cur = current();
-        const { w, h } = sizeRef.current;
+        const { w, h } = visible();
         const k = Math.max(z.scaleExtent()[0], Math.min(K_MAX, cur.k * f));
         const cx = (w / 2 - cur.x) / cur.k, cy = (h / 2 - cur.y) / cur.k;
         animate(zoomIdentity.translate(w / 2 - cx * k, h / 2 - cy * k).scale(k), 280);
@@ -161,7 +177,7 @@ export function Plan({
         };
         if (l === 1) return animate(fitTransform());
         const cur = current();
-        const { w, h } = sizeRef.current;
+        const { w, h } = visible();
         const cx = (w / 2 - cur.x) / cur.k, cy = (h / 2 - cur.y) / cur.k;
         const k = targets[l];
         animate(zoomIdentity.translate(w / 2 - cx * k, h / 2 - cy * k).scale(k));
@@ -169,7 +185,7 @@ export function Plan({
       focusEquip: (id) => {
         const e = EQUIP_BY_ID[id];
         if (!e) return;
-        const { w, h } = sizeRef.current;
+        const { w, h } = visible();
         const m = Math.max(e.w, e.h) * 0.45 + 8;
         // Encuadre con margen; como mínimo nivel 3 si el equipo cabe en pantalla.
         const kBox = Math.min((w * 0.76) / (e.w + 2 * m), (h * 0.76) / (e.h + 2 * m));
@@ -184,7 +200,7 @@ export function Plan({
       panTo: (x, y) => {
         target = null;
         const cur = zoomTransformOf(svg);
-        const { w, h } = sizeRef.current;
+        const { w, h } = visible();
         sel.interrupt();
         sel.call(z.transform, zoomIdentity.translate(w / 2 - x * cur.k, h / 2 - y * cur.k).scale(cur.k));
       },
@@ -201,7 +217,7 @@ export function Plan({
   useEffect(() => {
     const svg = svgRef.current!;
     let raf = 0;
-    const toWorld = (ev: MouseEvent) => {
+    const toWorld = (ev: { clientX: number; clientY: number }) => {
       const r = svg.getBoundingClientRect();
       const t = zoomTransformOf(svg);
       return [(ev.clientX - r.left - t.x) / t.k, (ev.clientY - r.top - t.y) / t.k] as const;
@@ -223,9 +239,11 @@ export function Plan({
       if (rm) return onSelectRef.current({ type: 'room', id: rm.getAttribute('data-room')! });
       onSelectRef.current(null);
     };
-    const dbl = (ev: MouseEvent) => {
+    const dbl = (ev: MouseEvent | TouchEvent) => {
       ev.preventDefault();
       const c = controller.current!;
+      const pt = 'changedTouches' in ev ? ev.changedTouches[0] : ev;
+      if (!pt) return;
       const el = ev.target as Element;
       const eq = el.closest('[data-id]');
       const t = zoomTransformOf(svg);
@@ -251,10 +269,10 @@ export function Plan({
         // Primer doble clic: encuadra el área. Siguientes: acercamiento progresivo al cursor.
         if (t.k < fitK * 0.92) return c.zoomToBox(b, { pad: 0.08 });
       }
-      const [wx, wy] = toWorld(ev);
+      const [wx, wy] = toWorld(pt);
       const r = svg.getBoundingClientRect();
       const k = Math.min(K_MAX, t.k * 2.2);
-      const sx = ev.clientX - r.left, sy = ev.clientY - r.top;
+      const sx = pt.clientX - r.left, sy = pt.clientY - r.top;
       select(svg)
         .interrupt()
         .transition()
@@ -265,12 +283,12 @@ export function Plan({
     svg.addEventListener('mousemove', move);
     svg.addEventListener('mouseleave', leave);
     svg.addEventListener('click', click);
-    svg.addEventListener('dblclick', dbl);
+    dblRef.current = dbl;
     return () => {
       svg.removeEventListener('mousemove', move);
       svg.removeEventListener('mouseleave', leave);
       svg.removeEventListener('click', click);
-      svg.removeEventListener('dblclick', dbl);
+      dblRef.current = () => {};
       cancelAnimationFrame(raf);
     };
   }, [controller]);

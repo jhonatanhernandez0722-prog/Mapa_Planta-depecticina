@@ -17,6 +17,8 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1920, height: 1080 },
 });
 const page = await browser.newPage();
+// La guía de bienvenida se omite en las pruebas salvo QA_GUIDE=1.
+if (!process.env.QA_GUIDE) await page.evaluateOnNewDocument(() => localStorage.setItem('plano-guia-v1', '1'));
 const problems = [];
 page.on('console', (m) => {
   if (m.type() === 'error' || m.type() === 'warning') problems.push(`[${m.type()}] ${m.text()}`);

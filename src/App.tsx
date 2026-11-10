@@ -8,25 +8,77 @@ import type { Selection } from './render/Overlays';
 import { AreaTree, LayerPanel, SearchBox } from './ui/Sidebar';
 import { InfoPanel } from './ui/InfoPanel';
 import { LodIndicator, Minimap, ScaleBar, StatusBar, ZoomReadout } from './ui/Hud';
+import { Guide, guideAlreadySeen } from './ui/Guide';
 import { Icon } from './ui/Icon';
+
+function useMedia(query: string) {
+  const [m, setM] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setM(mq.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, [query]);
+  return m;
+}
+
+function useWindowHeight() {
+  const [h, setH] = useState(window.innerHeight);
+  useEffect(() => {
+    const on = () => setH(window.innerHeight);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  return h;
+}
+
+/** Fracción de la altura que ocupa el panel de información en móvil. */
+const SHEET_FRACTION = 0.5;
 
 export default function App() {
   const controller = useRef<PlanController | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const canvasRef = useRef<HTMLElement>(null);
+  const mobile = useMedia('(max-width: 760px)');
+  const touch = useMedia('(pointer: coarse)');
+  const winH = useWindowHeight();
   const [selection, setSelection] = useState<Selection>(null);
   const [hidden, setHidden] = useState<Set<LayerId>>(() => new Set());
   const [tab, setTab] = useState<'areas' | 'capas'>('areas');
   const [grid, setGrid] = useState(false);
   const [minimap, setMinimap] = useState(true);
-  const [help, setHelp] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [guide, setGuide] = useState(() => !guideAlreadySeen());
+  const [interacted, setInteracted] = useState(false);
 
   const select = useCallback((s: Selection) => setSelection(s), []);
 
-  const pick = useCallback((h: SearchHit) => {
-    setSelection({ type: h.type, id: h.id });
-    if (h.type === 'equip') controller.current?.focusEquip(h.id);
-    else controller.current?.focusRoom(h.id);
-  }, []);
+  const goTo = useCallback(
+    (s: Selection) => {
+      setSelection(s);
+      if (mobile) setMenuOpen(false);
+      // En móvil el panel inferior tapa media pantalla: se encuadra en la mitad visible.
+      controller.current?.setBottomInset(mobile && s ? Math.round(window.innerHeight * SHEET_FRACTION) : 0);
+      if (s?.type === 'equip') controller.current?.focusEquip(s.id);
+      else if (s?.type === 'room') controller.current?.focusRoom(s.id);
+    },
+    [mobile],
+  );
+
+  const pick = useCallback((h: SearchHit) => goTo({ type: h.type, id: h.id }), [goTo]);
+
+  // El aviso de uso desaparece tras la primera interacción con el plano.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el || interacted) return;
+    const done = () => setInteracted(true);
+    el.addEventListener('wheel', done, { passive: true });
+    el.addEventListener('pointerdown', done);
+    return () => {
+      el.removeEventListener('wheel', done);
+      el.removeEventListener('pointerdown', done);
+    };
+  }, [interacted]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -34,6 +86,7 @@ export default function App() {
       if (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA') return;
       if ((e.key === 'k' && (e.ctrlKey || e.metaKey)) || e.key === '/') {
         e.preventDefault();
+        if (mobile) setMenuOpen(true);
         searchRef.current?.focus();
         return;
       }
@@ -43,14 +96,17 @@ export default function App() {
       if (e.key === 'f' || e.key === 'F' || e.key === 'Home') c.fit();
       else if (e.key === '+' || e.key === '=') c.zoomBy(1.6);
       else if (e.key === '-' || e.key === '_') c.zoomBy(1 / 1.6);
-      else if (e.key === 'Escape') setSelection(null);
-      else if (['1', '2', '3', '4'].includes(e.key)) c.zoomToLod(+e.key as Lod);
+      else if (e.key === 'Escape') {
+        setSelection(null);
+        setMenuOpen(false);
+        setGuide(false);
+      } else if (['1', '2', '3', '4'].includes(e.key)) c.zoomToLod(+e.key as Lod);
       else if (e.key === 'g' || e.key === 'G') setGrid((g) => !g);
-      else if (e.key === '?') setHelp((h) => !h);
+      else if (e.key === '?') setGuide((h) => !h);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [mobile]);
 
   const selectionLabel =
     selection?.type === 'equip'
@@ -59,9 +115,19 @@ export default function App() {
         ? `Selección: ${ROOM_BY_ID[selection.id]?.name}`
         : 'Sin selección';
 
+  const bottomInset = mobile && selection ? Math.round(winH * SHEET_FRACTION) : 0;
+
   return (
-    <div className={`app ${selection ? 'with-info' : ''}`}>
+    <div className={`app ${selection ? 'with-info' : ''} ${mobile ? 'is-mobile' : ''} ${menuOpen ? 'menu-open' : ''}`}>
       <header className="toolbar">
+        <button
+          className="icon-btn menu-btn"
+          onClick={() => setMenuOpen((m) => !m)}
+          aria-label={menuOpen ? 'Cerrar menú' : 'Abrir menú: buscar, áreas y capas'}
+          aria-expanded={menuOpen}
+        >
+          <Icon name={menuOpen ? 'close' : 'menu'} size={20} />
+        </button>
         <div className="brand">
           <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden>
             <rect x="2.5" y="5" width="19" height="14" fill="none" stroke="var(--accent)" strokeWidth="1.6" />
@@ -73,36 +139,39 @@ export default function App() {
             <span>Plano general 2D · Reconstrucción vectorial</span>
           </div>
         </div>
-        <div className="tb-sep" />
+        <div className="tb-sep hide-mobile" />
         <div className="tb-group">
-          <button className="icon-btn" onClick={() => controller.current?.fit()} title="Ver toda la planta (F)">
+          <button className="icon-btn" onClick={() => controller.current?.fit()} title="Ver toda la planta (F)" aria-label="Ver toda la planta">
             <Icon name="fit" />
           </button>
-          <button className="icon-btn" onClick={() => controller.current?.zoomBy(1 / 1.6)} title="Alejar (−)">
+          <button className="icon-btn" onClick={() => controller.current?.zoomBy(1 / 1.6)} title="Alejar (−)" aria-label="Alejar">
             <Icon name="minus" />
           </button>
           <ZoomReadout />
-          <button className="icon-btn" onClick={() => controller.current?.zoomBy(1.6)} title="Acercar (+)">
+          <button className="icon-btn" onClick={() => controller.current?.zoomBy(1.6)} title="Acercar (+)" aria-label="Acercar">
             <Icon name="plus" />
           </button>
         </div>
-        <div className="tb-sep" />
+        <div className="tb-sep hide-mobile" />
         <LodIndicator controller={controller} />
         <div className="tb-grow" />
         <div className="tb-group">
-          <button className={`icon-btn ${grid ? 'on' : ''}`} onClick={() => setGrid((g) => !g)} title="Rejilla de referencia (G)" aria-pressed={grid}>
+          <button className={`help-btn ${guide ? 'on' : ''}`} onClick={() => setGuide((g) => !g)} title="Cómo usar el plano (?)">
+            <Icon name="help" size={17} />
+            <span>Cómo usar</span>
+          </button>
+          <button className={`icon-btn hide-mobile ${grid ? 'on' : ''}`} onClick={() => setGrid((g) => !g)} title="Rejilla de referencia (G)" aria-pressed={grid}>
             <Icon name="grid" />
           </button>
-          <button className={`icon-btn ${minimap ? 'on' : ''}`} onClick={() => setMinimap((m) => !m)} title="Minimapa" aria-pressed={minimap}>
+          <button className={`icon-btn hide-mobile ${minimap ? 'on' : ''}`} onClick={() => setMinimap((m) => !m)} title="Minimapa" aria-pressed={minimap}>
             <Icon name="map" />
-          </button>
-          <button className={`icon-btn ${help ? 'on' : ''}`} onClick={() => setHelp((h) => !h)} title="Atajos de teclado (?)" aria-pressed={help}>
-            <Icon name="keyboard" />
           </button>
         </div>
       </header>
 
-      <nav className="sidebar">
+      {mobile && menuOpen && <div className="drawer-backdrop" onClick={() => setMenuOpen(false)} />}
+
+      <nav className="sidebar" aria-label="Navegación del plano">
         <SearchBox onPick={pick} inputRef={searchRef} />
         <div className="tabs" role="tablist">
           <button role="tab" aria-selected={tab === 'areas'} className={tab === 'areas' ? 'on' : ''} onClick={() => setTab('areas')}>
@@ -117,14 +186,8 @@ export default function App() {
           {tab === 'areas' ? (
             <AreaTree
               selection={selection}
-              onSelectRoom={(id) => {
-                setSelection({ type: 'room', id });
-                controller.current?.focusRoom(id);
-              }}
-              onSelectEquip={(id) => {
-                setSelection({ type: 'equip', id });
-                controller.current?.focusEquip(id);
-              }}
+              onSelectRoom={(id) => goTo({ type: 'room', id })}
+              onSelectEquip={(id) => goTo({ type: 'equip', id })}
             />
           ) : (
             <LayerPanel hidden={hidden} setHidden={setHidden} />
@@ -132,43 +195,38 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="canvas">
-        <Plan hidden={hidden} selection={selection} onSelect={select} controller={controller} grid={grid} />
+      <main className="canvas" ref={canvasRef}>
+        <Plan hidden={hidden} selection={selection} onSelect={select} controller={controller} grid={grid} bottomInset={bottomInset} />
         <ScaleBar />
-        {minimap && <Minimap controller={controller} />}
-        <div className="canvas-hint">
-          Rueda: zoom al cursor · Arrastrar: desplazar · Doble clic: acercar al área
-        </div>
-        {help && (
-          <div className="help-pop" role="dialog" aria-label="Atajos de teclado">
-            <div className="help-head">
-              Atajos de teclado
-              <button className="icon-btn sm" onClick={() => setHelp(false)} aria-label="Cerrar">
-                <Icon name="close" size={14} />
-              </button>
-            </div>
-            <dl>
-              <dt><kbd>F</kbd></dt><dd>Ver toda la planta</dd>
-              <dt><kbd>+</kbd> <kbd>−</kbd></dt><dd>Acercar / alejar</dd>
-              <dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd>Ir al nivel de detalle N1–N4</dd>
-              <dt><kbd>/</kbd></dt><dd>Buscar</dd>
-              <dt><kbd>G</kbd></dt><dd>Rejilla</dd>
-              <dt><kbd>Esc</kbd></dt><dd>Quitar selección</dd>
-              <dt>Doble clic</dt><dd>Encuadrar área; repetir para acercar</dd>
-            </dl>
+        {minimap && !mobile && <Minimap controller={controller} />}
+        {!interacted && !guide && (
+          <div className="usage-hint" role="note">
+            <Icon name={touch ? 'hand' : 'info'} size={18} />
+            <span>
+              {touch ? (
+                <>
+                  <b>Pellizca</b> para acercar · <b>Arrastra</b> para moverte · <b>Toca</b> un equipo para ver su información
+                </>
+              ) : (
+                <>
+                  <b>Rueda del ratón</b>: acercar/alejar · <b>Arrastrar</b>: moverse · <b>Clic</b>: ver información · <b>Doble clic</b>: entrar al área
+                </>
+              )}
+            </span>
+            <button className="hint-more" onClick={() => setGuide(true)}>
+              Ver guía
+            </button>
           </div>
         )}
       </main>
 
       {selection && (
-        <InfoPanel sel={selection} onClose={() => setSelection(null)} onSelect={(s) => {
-          setSelection(s);
-          if (s?.type === 'equip') controller.current?.focusEquip(s.id);
-          else if (s?.type === 'room') controller.current?.focusRoom(s.id);
-        }} controller={controller} />
+        <InfoPanel sel={selection} onClose={() => setSelection(null)} onSelect={goTo} controller={controller} />
       )}
 
       <StatusBar selectionLabel={selectionLabel} />
+
+      {guide && <Guide touch={touch} onClose={() => setGuide(false)} />}
     </div>
   );
 }

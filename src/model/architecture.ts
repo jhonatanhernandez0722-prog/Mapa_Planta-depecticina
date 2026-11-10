@@ -62,6 +62,8 @@ export const WALL_RUNS: Run[] = [
   // Vestidores / antesala / esclusa
   V(281, 363, 504.5),
   H(450, 281, 420),
+  // Muro divisorio entre el vestidor de damas y el de varones
+  V(351, 363, 450),
   V(420, 363, 504.5),
   // Almacén de reactivos
   V(543, 363, 471),
@@ -80,7 +82,6 @@ export const LIGHT_RUNS: Run[] = [
   { p: [375, 427], q: [380, 427], light: true },
   { p: [390, 427], q: [420, 427], light: true },
   { p: [375, 427], q: [375, 450], light: true },
-  { p: [351, 430], q: [351, 450], light: true },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -260,10 +261,18 @@ export const ROOMS: Room[] = [
     nota: 'Espacio sin rótulo en la referencia.',
   },
   {
-    id: 'vestidores', name: 'Vestidores y baños', sub: '(Damas y Varones)', category: 'sanitario', major: true,
+    id: 'vest-damas', name: 'Vestidor y baño · Damas', category: 'sanitario', major: true,
     rotulo: 'VESTIERES Y BAÑOS (Domas y Vinenas)',
-    poly: rect(281, 363, 420, 450), label: [351, 400], labelSize: 5.6,
-    descripcion: 'Vestidores con taquillas, lavamanos e inodoros, separados para damas y varones.',
+    poly: rect(281, 363, 351, 450), label: [316, 404], labelSize: 5,
+    descripcion: 'Vestidor con taquillas, dos lavamanos e inodoro, con acceso propio desde la antesala.',
+    nota: 'La referencia dibuja un único recinto «Damas y Varones» con dos puertas, dos pares de lavamanos y dos inodoros simétricos; se ha cerrado con un muro divisorio. La asignación damas (oeste) / varones (este) es una suposición.',
+  },
+  {
+    id: 'vest-varones', name: 'Vestidor y baño · Varones', category: 'sanitario', major: true,
+    rotulo: 'VESTIERES Y BAÑOS (Domas y Vinenas)',
+    poly: rect(351, 363, 420, 450), label: [385.5, 404], labelSize: 5,
+    descripcion: 'Vestidor con taquillas, dos lavamanos e inodoro, con acceso propio desde la antesala.',
+    nota: 'La referencia dibuja un único recinto «Damas y Varones» con dos puertas, dos pares de lavamanos y dos inodoros simétricos; se ha cerrado con un muro divisorio. La asignación damas (oeste) / varones (este) es una suposición.',
   },
   {
     id: 'antesala', name: 'Antesala de vestidores', category: 'sanitario',
@@ -343,7 +352,7 @@ export const ZONE_GROUPS: { name: string; rooms: string[] }[] = [
   { name: 'Proceso', rooms: ['lavado', 'cortado', 'hidrolisis', 'filtracion', 'precipitacion', 'spray', 'molienda'] },
   { name: 'Producto terminado', rooms: ['almacen-pt', 'anden'] },
   { name: 'Calidad y reactivos', rooms: ['laboratorio', 'reactivos'] },
-  { name: 'Personal y sanitarios', rooms: ['vestidores', 'antesala', 'esclusa'] },
+  { name: 'Personal y sanitarios', rooms: ['vest-damas', 'vest-varones', 'antesala', 'esclusa'] },
   { name: 'Administración y servicios', rooms: ['oficinas', 'juntas', 'cafeteria', 'caldera', 'local-e'] },
   { name: 'Circulaciones', rooms: ['pasillo', 'pasillo-personal', 'pasillo-servicio'] },
   { name: 'Exterior', rooms: ['ptar', 'zona-limpieza'] },

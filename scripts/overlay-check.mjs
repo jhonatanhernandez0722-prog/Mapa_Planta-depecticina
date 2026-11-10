@@ -3,6 +3,8 @@ import puppeteer from 'puppeteer-core';
 const OUT = process.argv[2];
 const b = await puppeteer.launch({ executablePath: 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', headless: true, defaultViewport: { width: 1920, height: 1080 } });
 const p = await b.newPage();
+// La guía de bienvenida se omite en las pruebas salvo QA_GUIDE=1.
+if (!process.env.QA_GUIDE) await p.evaluateOnNewDocument(() => localStorage.setItem('plano-guia-v1', '1'));
 await p.goto('http://localhost:5173/', { waitUntil: 'networkidle0' });
 await p.evaluate(() => document.fonts.ready);
 await p.click('button[title="Minimapa"]');

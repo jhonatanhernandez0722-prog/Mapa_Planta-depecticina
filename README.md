@@ -46,7 +46,15 @@ En N3/N4 solo se dibuja en detalle lo que está dentro de la vista (con margen);
 
 Rueda: zoom al cursor · Arrastrar: desplazar · Clic: seleccionar equipo o área · Doble clic: encuadrar
 el área/equipo (repetir para seguir acercando) · `F` ver toda la planta · `+`/`−` · `1`–`4` ir a un nivel ·
-`/` buscar · `G` rejilla · `Esc` quitar selección. Panel lateral con búsqueda, árbol de áreas y 9 capas
+`/` buscar · `G` rejilla · `Esc` quitar selección.
+
+Al entrar por primera vez se muestra una **guía rápida** (gestos de ratón o táctiles según el dispositivo);
+se puede volver a abrir con el botón **Cómo usar** de la barra superior. Hasta la primera interacción
+aparece además un aviso destacado con los gestos básicos.
+
+**Móvil (≤ 760 px):** el plano ocupa toda la pantalla; búsqueda, áreas y capas se abren desde el menú ☰;
+la información del equipo aparece en un panel inferior y el equipo se encuadra en la mitad visible.
+Pellizcar para zoom, arrastrar para moverse, tocar para seleccionar y doble toque para acercar. Panel lateral con búsqueda, árbol de áreas y 9 capas
 conmutables (con «solo»); panel contextual con descripción, función, rótulo original, conexiones
 dibujadas y nivel de confianza.
 
@@ -64,6 +72,8 @@ Cada equipo guarda el **rótulo tal como aparece en la referencia** y un nivel d
 - Sin rótulo en la referencia (representados de forma aproximada): las 3 unidades de la PTAR,
   el canal junto a la lavadora, el recuadro auxiliar de la caldera, el local contiguo al laboratorio
   y varios equipos de mesa del laboratorio.
+- Vestidores: la referencia dibuja un único recinto «Damas y Varones» con dos puertas y equipamiento
+  simétrico; se ha cerrado con un muro divisorio. Damas al oeste y varones al este es una suposición.
 - No se muestran capacidades ni especificaciones que no figuren en la referencia.
 
 ## Control de calidad
@@ -72,5 +82,6 @@ Cada equipo guarda el **rótulo tal como aparece en la referencia** y un nivel d
 
 - `qa.mjs` — errores de consola y capturas por nivel / interacción.
 - `overlay-check.mjs` — render N1 para superponerlo a la referencia (muros, puertas, redes y equipos coinciden).
+- `mobile.mjs` — móvil emulado (390×844, táctil): guía, menú, panel inferior y doble toque.
 - `perf.mjs` — tiempos de frame en zoom y desplazamiento continuos. Compilación de producción:
   p95 = 16,9 ms (60 fps), sin tareas largas.
