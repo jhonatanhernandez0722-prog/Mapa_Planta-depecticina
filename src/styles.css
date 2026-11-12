@@ -851,6 +851,28 @@ kbd {
   color: #fff;
 }
 
+/* Descarga DXF */
+.dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  margin-right: 6px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ui-text);
+  text-decoration: none;
+  background: var(--ui-panel-2);
+  border: 1px solid var(--ui-border-2);
+  transition: background 0.12s, border-color 0.12s;
+}
+.dl-btn:hover {
+  background: var(--ui-raised);
+  border-color: #46525e;
+}
+
 /* Guía */
 .guide-backdrop {
   position: fixed;
@@ -1577,8 +1599,14 @@ kbd {
     padding: 0 9px;
     height: 34px;
   }
-  .help-btn span {
+  .help-btn span,
+  .dl-btn span {
     display: none;
+  }
+  .dl-btn {
+    margin-right: 0;
+    padding: 0 9px;
+    height: 34px;
   }
 
   /* Panel lateral -> menú desplegable */

@@ -201,7 +201,7 @@ export const Signage = memo(function Signage({ lod }: { lod: Lod }) {
 /* ------------------------------------------------------------------ */
 /*  Rótulos                                                            */
 /* ------------------------------------------------------------------ */
-const TITLE_LINES: Record<string, { lines: string[]; sub?: string[]; size?: number }> = {
+export const TITLE_LINES: Record<string, { lines: string[]; sub?: string[]; size?: number }> = {
   muelle: { lines: ['MUELLE DE', 'DESCARGA Y', 'PESAJE'] },
   'almacen-mp': { lines: ['ALMACENAMIENTO', 'MP'], sub: ['(Cáscaras de naranja,', '100,00 Mg)'] },
   lavado: { lines: ['SALA DE LAVADO', 'Y TRITURADO'] },
@@ -285,7 +285,7 @@ export const FreeLabels = memo(function FreeLabels({ lod, zq }: { lod: Lod; zq: 
   );
 });
 
-const SHORT: Record<string, string[]> = {
+export const SHORT: Record<string, string[]> = {
   hcl37: ['HCl 37 %'],
   etanol: ['Etanol'],
   paletizado: ['LÍNEA PARA', 'PALETIZADO', 'DE SACOS'],

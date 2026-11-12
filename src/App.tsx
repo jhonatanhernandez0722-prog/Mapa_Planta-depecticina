@@ -160,6 +160,10 @@ export default function App() {
             <Icon name="help" size={17} />
             <span>Cómo usar</span>
           </button>
+          <a className="dl-btn" href="planta-pectina-citrica.dxf" download title="Descargar el plano en formato DXF (se abre en AutoCAD)">
+            <Icon name="download" size={16} />
+            <span>DXF · AutoCAD</span>
+          </a>
           <button className={`icon-btn hide-mobile ${grid ? 'on' : ''}`} onClick={() => setGrid((g) => !g)} title="Rejilla de referencia (G)" aria-pressed={grid}>
             <Icon name="grid" />
           </button>

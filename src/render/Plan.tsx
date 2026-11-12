@@ -29,6 +29,9 @@ export interface PlanController {
   setBottomInset: (px: number) => void;
 }
 
+const EXPORT_MODE = new URLSearchParams(window.location.search).has('export');
+const EXPORT_VIEW: RenderView = { lod: 4, zq: 20, cull: { x: -1e5, y: -1e5, w: 2e5, h: 2e5 } };
+
 const LW: Record<Lod, number> = { 1: 0.85, 2: 1, 3: 1.2, 4: 1.45 };
 
 export function Plan({
@@ -294,7 +297,8 @@ export function Plan({
   }, [controller]);
 
   /* ---------------- Render ---------------- */
-  const { lod, zq, cull } = view;
+  // Modo exportación (?export): todo el plano al máximo detalle, sin culling (lo usa scripts/dxf-extract.mjs).
+  const { lod, zq, cull } = EXPORT_MODE ? EXPORT_VIEW : view;
   const ctx = useMemo(() => ({ lod, zq }), [lod, zq]);
 
   const equipNodes = useMemo(
@@ -357,7 +361,7 @@ export function Plan({
             <EquipTags lod={lod} zq={zq} />
           </g>
           <SheetFrame />
-          <SelectionOverlay sel={selection} zq={zq} />
+          {!EXPORT_MODE && <SelectionOverlay sel={selection} zq={zq} />}
         </g>
       </svg>
     </RenderCtx.Provider>

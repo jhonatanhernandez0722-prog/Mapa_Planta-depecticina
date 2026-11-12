@@ -12,6 +12,28 @@ npm run build      # compilación de producción en dist/
 npm run preview    # sirve dist/ en http://localhost:4173
 ```
 
+## Plano para AutoCAD (DXF)
+
+`public/planta-pectina-citrica.dxf` (también con el botón **DXF · AutoCAD** de la app) se abre
+directamente en AutoCAD con *Abrir*. Formato DXF R2018, **unidades en metros** (escala estimada:
+1 px de la referencia = 0,10 m; la planta mide ≈ 116 × 65 m con la lámina). Si se necesita otra escala,
+usar `ESCALA` con base en el origen.
+
+| Capa | Contenido |
+|---|---|
+| `A-MURO` / `A-MURO-RELLENO` | Contorno de muros (polilíneas cerradas unidas) y su relleno sólido |
+| `A-PUERTA`, `A-VENTANA`, `A-COLUMNA`, `A-LIMITE` | Puertas con arco de abatimiento, ventanas, columnas, límites discontinuos |
+| `A-AREA` (no imprime) / `A-AREA-NOMBRE` | Contorno de cada área (útil para `AREA`) y su nombre |
+| `A-MOBILIARIO(-RELLENO)` | Mobiliario y sanitarios |
+| `M-EQUIPO(-RELLENO)` | Maquinaria: **59 bloques** `EQ_<tag>` con atributos TAG, NOMBRE, AREA, FUNCION, CONFIANZA (extraíbles con `EXTRAERDATOS`) |
+| `M-EQUIPO-NOTAS` | Llamadas técnicas de detalle (**apagada** por defecto) |
+| `M-TUBERIA(-RELLENO)` | Tuberías y ductos físicos con válvulas |
+| `P-AGUA-POTABLE`, `P-RESIDUOS`, `P-PROCESO`, `P-PERSONAL` | Redes con flechas de sentido, colores de la leyenda original |
+| `G-SENALIZACION`, `G-ETIQUETA`, `G-TEXTO`, `A-LAMINA` | Señalización, tags, rótulos, marco/leyenda/cajetín |
+
+Para un plano sólo de líneas, inutilizar las capas `*-RELLENO`. Regenerar tras cambiar el plano
+(con `npm run dev` en marcha): `npm run export:dxf` (requiere Python con `ezdxf` y `shapely`).
+
 ## Arquitectura
 
 | Decisión | Motivo |
