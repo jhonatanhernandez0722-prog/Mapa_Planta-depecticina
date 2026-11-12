@@ -552,6 +552,11 @@ doc.header['$EXTMIN'] = (0, 0, 0)
 doc.header['$EXTMAX'] = (SW * S, H * S, 0)
 doc.set_modelspace_vport(height=H * S * 1.05, center=(SW * S / 2, H * S / 2))
 auditor = doc.audit()
+# Extensión y límites reales: ezdxf los toma del espacio modelo al guardar.
+from ezdxf import appsettings
+appsettings.update_extents(doc)
+msp.dxf.limmin = (0, 0)
+msp.dxf.limmax = (SW * S, H * S)
 doc.saveas(OUT, encoding='utf-8')
 
 counts = Counter(e.dxftype() for e in msp)

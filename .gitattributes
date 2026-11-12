@@ -1,0 +1,2 @@
+# El DXF se guarda byte a byte (sin conversión de saltos de línea)
+*.dxf binary
